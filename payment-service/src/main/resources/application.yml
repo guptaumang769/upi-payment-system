@@ -1,0 +1,69 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: payment-service
+  config:
+    import: "optional:configserver:${CONFIG_SERVER_URI:http://localhost:8888}"
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/paymentdb}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+
+payment:
+  outbox:
+    poll-interval-ms: ${OUTBOX_POLL_INTERVAL_MS:2000}
+    batch-size: ${OUTBOX_BATCH_SIZE:50}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      walletService:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        register-health-indicator: true
+  retry:
+    instances:
+      walletService:
+        max-attempts: 3
+        wait-duration: 500ms
+  bulkhead:
+    instances:
+      walletService:
+        max-concurrent-calls: 20
+  timelimiter:
+    instances:
+      walletService:
+        timeout-duration: 3s
+        cancel-running-future: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,circuitbreakers,circuitbreakerevents
+  endpoint:
+    health:
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
