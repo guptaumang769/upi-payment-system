@@ -1,0 +1,56 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      # Explicit routes. Each forwards to a discovery-resolved service via lb:// (Eureka + LB).
+      routes:
+        - id: payment-service
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/v1/payments/**
+          filters:
+            # Edge circuit breaker: if payment-service trips the breaker, fail fast to /fallback.
+            - name: CircuitBreaker
+              args:
+                name: paymentServiceCb
+                fallbackUri: forward:/fallback/payments
+        - id: wallet-service
+          uri: lb://wallet-service
+          predicates:
+            - Path=/api/v1/wallets/**
+      # Global CORS so a browser SPA can call the gateway directly.
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+
+# Resilience4j config backing the gateway's CircuitBreaker filter (reactor variant).
+resilience4j:
+  circuitbreaker:
+    instances:
+      paymentServiceCb:
+        sliding-window-size: 10
+        failure-rate-threshold: 50          # open once >=50% of the last 10 calls fail
+        wait-duration-in-open-state: 10s    # stay open 10s before probing again (half-open)
+        permitted-number-of-calls-in-half-open-state: 3
+  timelimiter:
+    instances:
+      paymentServiceCb:
+        timeout-duration: 4s                # cap how long the gateway waits on the route
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway,circuitbreakers
