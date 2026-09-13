@@ -1,9 +1,13 @@
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /build
 COPY pom.xml .
-COPY common ./common
+COPY common/pom.xml ./common/pom.xml
+COPY payment-service/pom.xml ./payment-service/pom.xml
+COPY wallet-service/pom.xml ./wallet-service/pom.xml
+COPY api-gateway/pom.xml ./api-gateway/pom.xml
+COPY config-server/pom.xml ./config-server/pom.xml
 COPY discovery-server ./discovery-server
-RUN mvn -q -B -pl discovery-server -am -DskipTests package
+RUN mvn -q -B -pl discovery-server -DskipTests package
 
 FROM eclipse-temurin:21-jre-alpine AS runtime
 WORKDIR /app

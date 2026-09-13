@@ -132,14 +132,3 @@ mvn test -pl wallet-service,payment-service
 - `PaymentServiceTest` — idempotent initiate + outbox write
 
 Integration tests and the live multi-service flow need Docker (see RUN-GUIDE).
-
----
-
-## What this demonstrates for interviews
-
-Distributed transactions (SAGA), exactly-once-ish delivery (outbox + idempotency),
-financial correctness (double-entry + optimistic locking), fault tolerance (Resilience4j),
-and microservice infrastructure (Eureka / Gateway / Config) — the full "design a payment
-system" answer, implemented and runnable.
-
-Concept deep-dives + interview Q&A → see the project's design notes.
