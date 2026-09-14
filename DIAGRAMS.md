@@ -37,7 +37,7 @@ flowchart TB
     Wal -->|consumes / emits| Kafka
     Kafka -. failures .-> DLT{{*.DLT}}
 
-    note1[SAGA choreography over Kafka:<br/>PaymentInitiated → WalletDebited → COMPLETED<br/>or WalletDebitFailed → FAILED compensation]
+    note1[SAGA choreography over Kafka:<br/>PaymentInitiated → DEBIT_PENDING → WalletDebited → COMPLETED<br/>or WalletDebitFailed → FAILED compensation<br/>Terminal events: PaymentCompleted / PaymentFailed on outcome]
 ```
 
 ---
@@ -201,8 +201,9 @@ sequenceDiagram
 ```mermaid
 stateDiagram-v2
     [*] --> INITIATED : POST /payments
-    INITIATED --> COMPLETED : WalletDebited + payee credited
-    INITIATED --> FAILED : WalletDebitFailed (compensation)
-    COMPLETED --> [*]
-    FAILED --> [*]
+    INITIATED --> DEBIT_PENDING : OutboxPoller relays PaymentInitiated to Kafka
+    DEBIT_PENDING --> COMPLETED : WalletDebited + payee credited
+    DEBIT_PENDING --> FAILED : WalletDebitFailed (compensation)
+    COMPLETED --> [*] : PaymentCompletedEvent published
+    FAILED --> [*] : PaymentFailedEvent published
 ```
