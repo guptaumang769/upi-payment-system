@@ -1,6 +1,8 @@
 package com.umang.upi.payment.messaging;
 
 import com.umang.upi.common.enums.PaymentStatus;
+import com.umang.upi.common.event.PaymentCompletedEvent;
+import com.umang.upi.common.event.PaymentFailedEvent;
 import com.umang.upi.common.event.WalletDebitFailedEvent;
 import com.umang.upi.common.event.WalletDebitedEvent;
 import com.umang.upi.common.messaging.KafkaTopics;
@@ -11,6 +13,7 @@ import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +24,7 @@ public class PaymentSagaConsumer {
 
     private final PaymentRepository paymentRepository;
     private final WalletGateway walletGateway;
+    private final KafkaTemplate<String, Object> jsonKafkaTemplate;
 
     @KafkaListener(topics = KafkaTopics.WALLET_DEBITED,
             containerFactory = "walletDebitedListenerFactory")
@@ -30,6 +34,10 @@ public class PaymentSagaConsumer {
                 event.paymentId(), event.toVpa());
         walletGateway.credit(event.toVpa(), event.amount(), event.paymentId());
         updateStatus(event.paymentId(), PaymentStatus.COMPLETED);
+        PaymentCompletedEvent completedEvent = new PaymentCompletedEvent(
+                event.paymentId(), event.fromVpa(), event.toVpa(),
+                event.amount(), event.correlationId(), Instant.now());
+        jsonKafkaTemplate.send(KafkaTopics.PAYMENT_COMPLETED, event.paymentId(), completedEvent);
     }
 
     @KafkaListener(topics = KafkaTopics.WALLET_DEBIT_FAILED,
@@ -39,6 +47,10 @@ public class PaymentSagaConsumer {
         log.warn("Debit failed for payment {} ({}) -> compensating: mark FAILED",
                 event.paymentId(), event.reason());
         updateStatus(event.paymentId(), PaymentStatus.FAILED);
+        PaymentFailedEvent failedEvent = new PaymentFailedEvent(
+                event.paymentId(), event.fromVpa(), event.toVpa(),
+                event.amount(), event.reason(), event.correlationId(), Instant.now());
+        jsonKafkaTemplate.send(KafkaTopics.PAYMENT_FAILED, event.paymentId(), failedEvent);
     }
 
     private void updateStatus(String paymentRef, PaymentStatus status) {

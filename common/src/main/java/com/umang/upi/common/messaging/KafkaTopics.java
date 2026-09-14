@@ -6,6 +6,8 @@ public final class KafkaTopics {
     }
 
     public static final String PAYMENT_INITIATED = "payment-initiated";
+    public static final String PAYMENT_COMPLETED = "payment-completed";
+    public static final String PAYMENT_FAILED = "payment-failed";
     public static final String WALLET_DEBITED = "wallet-debited";
     public static final String WALLET_DEBIT_FAILED = "wallet-debit-failed";
 

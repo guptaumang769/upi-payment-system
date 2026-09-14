@@ -25,6 +25,7 @@ import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.util.backoff.FixedBackOff;
 
 @Configuration
@@ -37,6 +38,30 @@ public class KafkaConfig {
     @Bean
     public NewTopic paymentInitiatedTopic() {
         return TopicBuilder.name(KafkaTopics.PAYMENT_INITIATED).partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic paymentCompletedTopic() {
+        return TopicBuilder.name(KafkaTopics.PAYMENT_COMPLETED).partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic paymentFailedTopic() {
+        return TopicBuilder.name(KafkaTopics.PAYMENT_FAILED).partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public ProducerFactory<String, Object> jsonProducerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        return new DefaultKafkaProducerFactory<>(props);
+    }
+
+    @Bean
+    public KafkaTemplate<String, Object> jsonKafkaTemplate() {
+        return new KafkaTemplate<>(jsonProducerFactory());
     }
 
     @Bean
